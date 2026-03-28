@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { sendNotification } from "./utils/notify";
 import { toast } from "sonner";
 
-
 type Mode = "countup" | "countdown";
 
 type Computer = {
@@ -14,17 +13,41 @@ type Computer = {
   countup: number;
   cost: number;
   notify: boolean;
+  startTime?: number; // timestamp when started
+  endTime?: number;   // timestamp when countdown ends
 };
 
 export default function CyberPage() {
+  
   const initialComputers: Computer[] = [
     { id: "Comp1", mode: "countup", countdown: 0, countup: 0, cost: 0, notify: false },
     { id: "Comp2", mode: "countup", countdown: 0, countup: 0, cost: 0, notify: false },
     { id: "Comp3", mode: "countup", countdown: 0, countup: 0, cost: 0, notify: false },
     { id: "Comp4", mode: "countup", countdown: 0, countup: 0, cost: 0, notify: false },
+    { id: "Comp5", mode: "countup", countdown: 0, countup: 0, cost: 0, notify: false },
+    { id: "Comp6", mode: "countup", countdown: 0, countup: 0, cost: 0, notify: false },
   ];
 
-  const [computers, setComputers] = useState(initialComputers);
+  const [computers, setComputers] = useState<Computer[]>(() => {
+    // Restore from localStorage
+    const saved = localStorage.getItem("computers");
+    if (saved) {
+      const parsed: Computer[] = JSON.parse(saved);
+      const now = Date.now();
+      return parsed.map(comp => {
+        if (comp.mode === "countdown" && comp.endTime) {
+          const remaining = Math.max(0, Math.floor((comp.endTime - now) / 1000));
+          return { ...comp, countdown: remaining, notify: remaining === 0 };
+        }
+        if (comp.mode === "countup" && comp.startTime) {
+          const elapsed = Math.floor((now - comp.startTime) / 1000);
+          return { ...comp, countup: elapsed, cost: Math.floor(elapsed / 60) };
+        }
+        return comp;
+      });
+    }
+    return initialComputers;
+  });
 
   // Timer logic
   useEffect(() => {
@@ -46,6 +69,11 @@ export default function CyberPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Persist to localStorage whenever computers change
+  useEffect(() => {
+    localStorage.setItem("computers", JSON.stringify(computers));
+  }, [computers]);
+
   // Notification loop every 5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
@@ -61,10 +89,20 @@ export default function CyberPage() {
   // Start countdown based on amount paid
   const startCountdown = (id: string, amount: number) => {
     const minutes = amount; // KSH 1 per minute
+    const endTime = Date.now() + minutes * 60 * 1000;
     setComputers(prev =>
       prev.map(comp =>
         comp.id === id
-          ? { ...comp, mode: "countdown", countdown: minutes * 60, countup: 0, cost: amount, notify: false }
+          ? {
+              ...comp,
+              mode: "countdown",
+              countdown: minutes * 60,
+              countup: 0,
+              cost: amount,
+              notify: false,
+              endTime,
+              startTime: undefined,
+            }
           : comp
       )
     );
@@ -72,10 +110,20 @@ export default function CyberPage() {
 
   // Switch to countup mode
   const startCountup = (id: string) => {
+    const startTime = Date.now();
     setComputers(prev =>
       prev.map(comp =>
         comp.id === id
-          ? { ...comp, mode: "countup", countdown: 0, countup: 0, cost: 0, notify: false }
+          ? {
+              ...comp,
+              mode: "countup",
+              countdown: 0,
+              countup: 0,
+              cost: 0,
+              notify: false,
+              startTime,
+              endTime: undefined,
+            }
           : comp
       )
     );
@@ -86,7 +134,16 @@ export default function CyberPage() {
     setComputers(prev =>
       prev.map(comp =>
         comp.id === id
-          ? { ...comp, mode: "countup", countdown: 0, countup: 0, cost: 0, notify: false }
+          ? {
+              ...comp,
+              mode: "countup",
+              countdown: 0,
+              countup: 0,
+              cost: 0,
+              notify: false,
+              startTime: undefined,
+              endTime: undefined,
+            }
           : comp
       )
     );
@@ -119,26 +176,25 @@ export default function CyberPage() {
     <div className="min-h-screen bg-gray-100 p-6">
       <h1 className="text-3xl font-bold text-center mb-8">Cyber Management System</h1>
       <div className="flex justify-center mb-8">
-        <button
-          onClick={() => {
-            const amount = parseInt(prompt("Enter amount to pay (KSH):") || "0");
-            const mobile = parseInt(prompt("Enter mobile number:") || "");
-            if (isNaN(amount) || amount <= 0) {
-              toast.error("Please enter a valid amount.");
-              return;
-            }
-            if (isNaN(mobile) || mobile.toString().length < 9) {
-              toast.error("Please enter a valid mobile number.");
-              return;
-            }
-            startPesapal(amount, mobile);
-          }}
-          className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold"
-        >
-          Initiate Payment
-        </button>
+            <button
+            onClick={() => {
+                const amount = parseInt(prompt("Enter amount to pay (KSH):") || "0");
+                const mobile = parseInt(prompt("Enter mobile number:") || "");
+                if (isNaN(amount) || amount <= 0) {
+                toast.error("Please enter a valid amount.");
+                return;
+                }
+                if (isNaN(mobile) || mobile.toString().length < 9) {
+                toast.error("Please enter a valid mobile number.");
+                return;
+                }
+                startPesapal(amount, mobile);
+            }}
+            className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold"
+            >
+            Initiate Payment
+            </button>
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {computers.map(comp => {
           const minutesLeft = Math.floor(comp.countdown / 60);

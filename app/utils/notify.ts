@@ -7,12 +7,12 @@ export function sendNotification(message: string) {
 
   if (Notification.permission === "granted") {
     new Notification(message);
-    playSound();
+    // playSound();
   } else if (Notification.permission !== "denied") {
     Notification.requestPermission().then(permission => {
       if (permission === "granted") {
         new Notification(message);
-        playSound(); 
+        // playSound(); 
       }
     });
   }
