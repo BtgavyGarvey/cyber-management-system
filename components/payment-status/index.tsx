@@ -8,8 +8,9 @@ import { useSearchParams } from "next/navigation";
 export default function PesapalReturnPage() {
   const searchParams = useSearchParams();
   const OrderTrackingId = searchParams.get("OrderTrackingId");
-  const name = searchParams.get("name");
+  // const payment_account = searchParams.get("payment_account");
   const [paymentData, setPaymentData] = useState<any>(null);
+  const name = paymentData?.payment_account || "Payment Verification";
   const [status, setStatus] = useState("Verifying payment...");
   const [statusType, setStatusType] = useState<"loading" | "success" | "error">("loading");
 
@@ -84,15 +85,24 @@ export default function PesapalReturnPage() {
               Transaction Details
             </h3>
             <div className="space-y-2 text-gray-300">
-              <p><span className="font-bold text-white">Tracking ID:</span> {paymentData.transactionTrackingId}</p>
+              <p><span className="font-bold text-white">Provider Ref:</span> {paymentData.providerRef}</p>
               <p><span className="font-bold text-white">Status:</span> {paymentData.status}</p>
               <p><span className="font-bold text-white">Amount:</span> KSH {paymentData.amount}</p>
-              <p><span className="font-bold text-white">Provider Ref:</span> {paymentData.providerRef}</p>
               <p><span className="font-bold text-white">Payment Account:</span> {paymentData.payment_account}</p>
               <p><span className="font-bold text-white">Message:</span> {paymentData.message}</p>
             </div>
           </motion.div>
         )}
+
+        <motion.button
+          onClick={() => window.location.href = "/"}
+          className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+        >
+          Back to Home
+        </motion.button>
       </motion.div>
     </div>
   );
