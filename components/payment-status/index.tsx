@@ -18,7 +18,7 @@ export default function PesapalReturnPage() {
       if (!OrderTrackingId) return toast.error("Missing OrderTrackingId in query parameters.");
 
       try {
-        const response = await fetch(`/api/payments/pesapal/webhook?OrderTrackingId=${OrderTrackingId}`);
+        const response = await fetch(`/api/pesapal/webhook?OrderTrackingId=${OrderTrackingId}`);
         const data = await response.json().catch(() => ({}));
 
         if (response.ok) {
