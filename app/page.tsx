@@ -19,35 +19,50 @@ type Computer = {
 
 export default function CyberPage() {
   
-  const initialComputers: Computer[] = [
-    { id: "Comp1", mode: "countup", countdown: 0, countup: 0, cost: 0, notify: false },
-    { id: "Comp2", mode: "countup", countdown: 0, countup: 0, cost: 0, notify: false },
-    { id: "Comp3", mode: "countup", countdown: 0, countup: 0, cost: 0, notify: false },
-    { id: "Comp4", mode: "countup", countdown: 0, countup: 0, cost: 0, notify: false },
-    { id: "Comp5", mode: "countup", countdown: 0, countup: 0, cost: 0, notify: false },
-    { id: "Comp6", mode: "countup", countdown: 0, countup: 0, cost: 0, notify: false },
-  ];
+  const [computers, setComputers] = useState<Computer[]>([]);
 
-  const [computers, setComputers] = useState<Computer[]>(() => {
-    // Restore from localStorage
-    const saved = localStorage.getItem("computers");
-    if (saved) {
-      const parsed: Computer[] = JSON.parse(saved);
-      const now = Date.now();
-      return parsed.map(comp => {
-        if (comp.mode === "countdown" && comp.endTime) {
-          const remaining = Math.max(0, Math.floor((comp.endTime - now) / 1000));
-          return { ...comp, countdown: remaining, notify: remaining === 0 };
-        }
-        if (comp.mode === "countup" && comp.startTime) {
-          const elapsed = Math.floor((now - comp.startTime) / 1000);
-          return { ...comp, countup: elapsed, cost: Math.floor(elapsed / 60) };
-        }
-        return comp;
-      });
+  // Add a new computer
+  const addComputer = () => {
+    const newId = `COMPUTER NO. ${computers.length + 1}`;
+    const newComputer: Computer = {
+      id: newId,
+      mode: "countup",
+      countdown: 0,
+      countup: 0,
+      cost: 0,
+      notify: false,
+    };
+    setComputers(prev => [...prev, newComputer]);
+  };
+
+  // Remove the last computer
+  const removeComputer = () => {
+    setComputers(prev => prev.slice(0, -1));
+  };
+
+  // Restore from localStorage safely
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("computers");
+      if (saved) {
+        const parsed: Computer[] = JSON.parse(saved);
+        const now = Date.now();
+        setComputers(
+          parsed.map(comp => {
+            if (comp.mode === "countdown" && comp.endTime) {
+              const remaining = Math.max(0, Math.floor((comp.endTime - now) / 1000));
+              return { ...comp, countdown: remaining, notify: remaining === 0 };
+            }
+            if (comp.mode === "countup" && comp.startTime) {
+              const elapsed = Math.floor((now - comp.startTime) / 1000);
+              return { ...comp, countup: elapsed, cost: Math.floor(elapsed / 60) };
+            }
+            return comp;
+          })
+        );
+      }
     }
-    return initialComputers;
-  });
+  }, []);
 
   // Timer logic
   useEffect(() => {
@@ -71,7 +86,9 @@ export default function CyberPage() {
 
   // Persist to localStorage whenever computers change
   useEffect(() => {
-    localStorage.setItem("computers", JSON.stringify(computers));
+    if (typeof window !== "undefined") {
+      localStorage.setItem("computers", JSON.stringify(computers));
+    }
   }, [computers]);
 
   // Notification loop every 5 seconds
@@ -86,64 +103,37 @@ export default function CyberPage() {
     return () => clearInterval(interval);
   }, [computers]);
 
-  // Start countdown based on amount paid
+  // Start countdown
   const startCountdown = (id: string, amount: number) => {
-    const minutes = amount; // KSH 1 per minute
+    const minutes = amount;
     const endTime = Date.now() + minutes * 60 * 1000;
     setComputers(prev =>
       prev.map(comp =>
         comp.id === id
-          ? {
-              ...comp,
-              mode: "countdown",
-              countdown: minutes * 60,
-              countup: 0,
-              cost: amount,
-              notify: false,
-              endTime,
-              startTime: undefined,
-            }
+          ? { ...comp, mode: "countdown", countdown: minutes * 60, cost: amount, notify: false, endTime }
           : comp
       )
     );
   };
 
-  // Switch to countup mode
+  // Start countup
   const startCountup = (id: string) => {
     const startTime = Date.now();
     setComputers(prev =>
       prev.map(comp =>
         comp.id === id
-          ? {
-              ...comp,
-              mode: "countup",
-              countdown: 0,
-              countup: 0,
-              cost: 0,
-              notify: false,
-              startTime,
-              endTime: undefined,
-            }
+          ? { ...comp, mode: "countup", countdown: 0, countup: 0, cost: 0, notify: false, startTime }
           : comp
       )
     );
   };
 
-  // Reset computer
+  // Reset
   const resetComputer = (id: string) => {
     setComputers(prev =>
       prev.map(comp =>
         comp.id === id
-          ? {
-              ...comp,
-              mode: "countup",
-              countdown: 0,
-              countup: 0,
-              cost: 0,
-              notify: false,
-              startTime: undefined,
-              endTime: undefined,
-            }
+          ? { ...comp, mode: "countup", countdown: 0, countup: 0, cost: 0, notify: false, startTime: undefined, endTime: undefined }
           : comp
       )
     );
@@ -175,6 +165,7 @@ export default function CyberPage() {
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <h1 className="text-3xl font-bold text-center mb-8">Cyber Management System</h1>
+      <div className="flex justify-between mb-8">
       <div className="flex justify-center mb-8">
             <button
             onClick={() => {
@@ -194,6 +185,23 @@ export default function CyberPage() {
             >
             Initiate Payment
             </button>
+      </div>
+      {/* Add/Remove buttons */}
+      <div className="flex justify-center gap-4 mb-8">
+        <button
+          onClick={addComputer}
+          className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700 font-semibold"
+        >
+          + Add Computer
+        </button>
+        <button
+          onClick={removeComputer}
+          disabled={computers.length === 0}
+          className="px-4 py-1 bg-red-600 text-white rounded hover:bg-red-700 font-semibold disabled:opacity-50"
+        >
+          – Remove Computer
+        </button>
+      </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {computers.map(comp => {
